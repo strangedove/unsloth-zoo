@@ -154,7 +154,18 @@ def prepare_model_for_training(
         # Upcast to float32 if needed
         if requires_grad:
             name = name.replace("base_model", "model", 1)
-            name = re.sub(r'\.(\d+)\.', r'[\1].', name)
+            layer_number = re.search(r"\.[\d]{1,}\.", name)
+            if layer_number is not None:
+                # Convert .0. to [0]
+                layer_number = layer_number.group(0)
+                name = name.replace(layer_number, f"[{layer_number[1:-1]}].")
+                # Now do the same name check for any experts that didn't get hit 
+                if "experts" in name: 
+                    expert_number = re.search(r"\.[\d]{1,}\.", name)
+                    if expert_number is not None:
+                        expert_number = expert_number.group(0)
+                        name = name.replace(f"{expert_number}", f"[{expert_number[1:-1]}].") ### End of addition ###
+            pass
             name = name.replace(".weight", "", 1)
             dtype = torch.float32 if upcast else mixed_precision_dtype
             try:
